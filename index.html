@@ -452,9 +452,31 @@
         .energy-bar-fill { width: 100%; height: 10px; background-color: rgba(255, 255, 255, 0.2); border-radius: 5px; overflow: hidden; }
         .energy-bar-inner { height: 100%; background: linear-gradient(90deg, #64DD17, #33B760); border-radius: 5px; transition: width 0.5s ease; }
         .tab-bar { display: flex; justify-content: space-around; background: rgba(0, 0, 0, 0.9); border-top: 1px solid rgba(255, 255, 255, 0.1); flex-shrink: 0; padding: 0 0 0 0; /* УБРАН нижний padding */ }
-        .tab-item { flex-grow: 1; padding: 5px 2px 5px 2px; /* НОВОЕ: Более компактный padding */ text-align: center; cursor: pointer; color: #eee; border-top: 3px solid transparent; transition: color 0.2s, border-color 0.2s, transform 0.1s; font-size: 0.9em; /* УМЕНЬШЕНО */ font-weight: 500; }
+        .tab-item { 
+            flex-grow: 1; 
+            /* ИЗМЕНЕНО: Увеличиваем отступы сверху и снизу с 5px до 8px. 
+               Это сделает весь таб-бар выше.
+            */
+            padding: 8px 2px 8px 2px; 
+            text-align: center; 
+            cursor: pointer; 
+            color: #eee; 
+            border-top: 3px solid transparent; 
+            transition: color 0.2s, border-color 0.2s, transform 0.1s; 
+            /* ИЗМЕНЕНО: Слегка вернем размер шрифта, чтобы он соответствовал */
+            font-size: 0.95em; 
+            font-weight: 500; 
+        }
         .tab-item:active { transform: scale(0.98); }
-        .tab-item img { width: 28px; /* УМЕНЬШЕНО с 32px */ height: 28px; /* УМЕНЬШЕНО с 32px */ opacity: 0.9; margin-bottom: 2px; display: block; margin: 0 auto 2px auto; }
+        .tab-item img {
+            /* ИЗМЕНЕНО: Увеличиваем иконки */
+            width: 40px; 
+            height: 40px; 
+            opacity: 0.9;
+            margin-bottom: 2px;
+            display: block;
+            margin: 0 auto 2px auto;
+        }
         .tab-item.active { color: #eee; border-top-color: #FFD700; }
         .tab-item.active img { opacity: 1; }
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
@@ -634,8 +656,8 @@
                 font-size: 0.8em;
             }
             .tab-item img {
-                width: 25px;
-                height: 25px;
+                width: 30px;
+                height: 30px;
             }
         }
         /* --- КОНЕЦ MEDIA QUERY --- */
@@ -1562,6 +1584,7 @@
         function App() {
             
             const [activeTab, setActiveTab] = useState('forest');
+            const [activeSquadTab, setActiveSquadTab] = useState('clan'); 
             const [balance, setBalance] = useState(0); 
             const [energy, setEnergy] = useState(BASE_ENERGY); 
             const [tapAnimations, setTapAnimations] = useState([]); 
@@ -3005,7 +3028,65 @@
                         );
 
              case 'squad':
-                        return <LockedScreen tab={activeTab} />;
+                        // ЗАМЕНА: Показываем разный контент для "Стаи"
+                        return (
+                            <div className="game-screen-scroll">
+                                {
+                                    // Используем activeSquadTab (из 'памяти'), чтобы выбрать, что показать
+                                    (() => {
+                                        switch(activeSquadTab) {
+                                            case 'clan':
+                                                return (
+                                                    <div>
+                                                        <div className="boost-header">
+                                                            <h2>🤝 Клан (Сквад)</h2>
+                                                        </div>
+                                                        <div style={{ padding: '20px', textAlign: 'center', color: '#ccc' }}>
+                                                            <p>Здесь будет информация о твоем клане.</p>
+                                                            <p>(Тот текст "что это стая..." был здесь)</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            case 'boss':
+                                                return (
+                                                    <div>
+                                                        <div className="boost-header">
+                                                            <h2>👹 Босс</h2>
+                                                        </div>
+                                                        <div style={{ padding: '20px', textAlign: 'center', color: '#ccc' }}>
+                                                            <p>Здесь будет экран битвы с боссом.</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            case 'wars':
+                                                return (
+                                                    <div>
+                                                        <div className="boost-header">
+                                                            <h2>⚔️ Войны</h2>
+                                                        </div>
+                                                        <div style={{ padding: '20px', textAlign: 'center', color: '#ccc' }}>
+                                                            <p>Здесь будет экран для Войн Кланов.</p>
+                                                        </div>
+                                                    </div>
+                                                );    
+                                            case 'leaders':
+                                                return (
+                                                    <div>
+                                                        <div className="boost-header">
+                                                            <h2>🏆 Лидеры</h2>
+                                                        </div>
+                                                        <div style={{ padding: '20px', textAlign: 'center', color: '#ccc' }}>
+                                                            <p>Здесь будет таблица лидеров.</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            default:
+                                                return null; // На всякий случай
+                                        }
+                                    })() // Сразу вызываем эту анонимную функцию
+                                }
+                            </div>
+                        );
                     default:
                         return <div className="forest-content" onClick={handleTap} onTouchStart={handleTouchStart}><ForestScreen /></div>;
                 }
@@ -3136,10 +3217,25 @@
                             <EnergyBar energy={energy} maxEnergy={maxEnergy} isInfinite={isInfiniteEnergy} />
                         )}
 
-                        <TabBar activeTab={activeTab} onTabClick={setActiveTab} />
+                        {/* --- НАЧАЛО ЗАМЕНЫ: Умный Таб-Бар --- */}
+                        {activeTab === 'squad' ? (
+                            // Если мы в "Стае", показываем новый таб-бар
+                            <SquadTabBar 
+                                activeTab={activeSquadTab}      // Используем "память" для стаи
+                                onTabClick={setActiveSquadTab}  // Меняем "память" стаи
+                                onGoHome={() => setActiveTab('forest')} // Кнопка "Главная"
+                            />
+                        ) : (
+                            // Иначе (во всех других вкладках) показываем главный таб-бар
+                            <TabBar 
+                                activeTab={activeTab} 
+                                onTabClick={setActiveTab} 
+                            />
+                        )}
+                        {/* --- КОНЕЦ ЗАМЕНЫ --- */}
 
                         {showRaidResultModal && (
-                            <RaidResultModal 
+                            <RaidResultModal
                                 result={showRaidResultModal}
                                 onClose={() => setShowRaidResultModal(null)}
                             />
@@ -3563,6 +3659,44 @@ function DailyRewardsModal({ onClose, rewardsCatalog, currentState, isAvailable,
                             key={tab.id}
                             className={`tab-item ${activeTab === tab.id ? 'active' : ''}`}
                             onClick={() => onTabClick(tab.id)}
+                        >
+                            <img src={tab.icon} alt={tab.id} />
+                            <span>{tab.name}</span>
+                        </div>
+                    ))}
+                </nav>
+            );
+        }
+
+        // --- Экраны ---
+
+        function SquadTabBar({ activeTab, onTabClick, onGoHome }) {
+            // Твои кнопки: Босс, Клан, Лидеры
+            const tabs = [
+                // Я поменял иконки на более подходящие (потом можем заменить)
+                { id: 'clan', name: 'Клан', icon: 'images/icon_friends2.png' }, // Твой "Клан(сквад)"
+                { id: 'boss', name: 'Босс', icon: 'images/icon_raid.png' },   // Твой "Бос"
+                { id: 'wars', name: 'Войны', icon: 'images/icon_raid.png' }, // <-- ДОБАВЬ ЭТУ СТРОКУ (иконку пока берем ту же, что и у босса)
+                { id: 'leaders', name: 'Лидеры', icon: 'images/icon_boosts.png' } // Твои "Лидеры"
+            ];
+
+            return (
+                <nav className="tab-bar">
+                    {/* 1. Твоя кнопка "Главная" (для возврата в Лес) */}
+                    <div 
+                        className="tab-item"
+                        onClick={onGoHome} // Эта функция вернет нас на 'forest'
+                    >
+                        <img src="images/icon_forest.png" alt="Главная" />
+                        <span>Главная</span>
+                    </div>
+
+                    {/* 2. Остальные кнопки "Стаи" */}
+                    {tabs.map(tab => (
+                        <div 
+                            key={tab.id}
+                            className={`tab-item ${activeTab === tab.id ? 'active' : ''}`}
+                            onClick={() => onTabClick(tab.id)} // Эта функция меняет activeSquadTab
                         >
                             <img src={tab.icon} alt={tab.id} />
                             <span>{tab.name}</span>
