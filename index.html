@@ -610,6 +610,96 @@
         .settings-button-link { display: block; background-color: #007BFF; color: white !important; text-decoration: none; padding: 12px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; transition: background-color 0.2s; margin-top: 10px; border: none; width: 100%; box-sizing: border-box; font-size: 1em; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         .settings-button-link:hover { background-color: #0056b3; }
 
+        /* --- СТИЛИ ДЛЯ КОМБО И ЯРОСТИ (JUICE) --- */
+        
+        /* Контейнер полоски комбо */
+        .combo-bar-container {
+            position: absolute;
+            top: 95px; 
+            left: 50%;
+            
+            /* --- ИСПРАВЛЕНИЕ: Скрываем полоску по умолчанию --- */
+            transform: translateX(-50%) translateY(-20px); /* Сдвинута вверх */
+            opacity: 0; /* Полностью прозрачна */
+            /* -------------------------------------------------- */
+
+            width: 50%; 
+            height: 8px; 
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #555; 
+            border-radius: 6px;
+            z-index: 50;
+            overflow: hidden;
+            
+            /* --- ИСПРАВЛЕНИЕ: Добавляем анимацию появления --- */
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out, border-color 0.3s;
+            /* ------------------------------------------------- */
+            
+            pointer-events: none; 
+        }
+
+        /* Класс, который делает полоску видимой (ЭТОТ БЛОК У ТЕБЯ ЕСТЬ, НО ПРОВЕРЬ) */
+        .combo-bar-container.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0); /* Плавный выезд на место */
+        }
+        
+        /* Сама полоска (заполнитель) */
+        .combo-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FF9800, #FF5722); 
+            width: 0%;
+            transition: width 0.1s linear;
+            box-shadow: 0 0 5px #FF5722;
+        }
+
+        /* Режим ЯРОСТИ (без изменений) */
+        .combo-bar-container.frenzy-mode {
+            border-color: #FFD700;
+            box-shadow: 0 0 10px rgba(255, 69, 0, 0.5);
+            opacity: 1; /* На всякий случай принудительно показываем */
+            transform: translateX(-50%) translateY(0);
+            animation: pulse-border 0.5s infinite alternate;
+        }
+        
+        .combo-bar-container.frenzy-mode .combo-bar-fill {
+            background: linear-gradient(90deg, #FFD700, #FF0000);
+            width: 100% !important;
+            animation: flicker 0.2s infinite;
+        }
+
+        /* ОБНОВЛЕННАЯ Анимация тряски (МЯГКАЯ) */
+        /* Раньше сдвиг был до 3px, теперь максимум 1.5px */
+        @keyframes shake-soft {
+            0% { transform: translate(0.5px, 0.5px) rotate(0deg); }
+            10% { transform: translate(-0.5px, -1px) rotate(-0.5deg); }
+            20% { transform: translate(-1.5px, 0px) rotate(0.5deg); }
+            30% { transform: translate(1.5px, 1px) rotate(0deg); }
+            40% { transform: translate(0.5px, -0.5px) rotate(0.5deg); }
+            50% { transform: translate(-0.5px, 1px) rotate(-0.5deg); }
+            60% { transform: translate(-1.5px, 0.5px) rotate(0deg); }
+            70% { transform: translate(1.5px, 0.5px) rotate(-0.5deg); }
+            80% { transform: translate(-0.5px, -0.5px) rotate(0.5deg); }
+            90% { transform: translate(0.5px, 1px) rotate(0deg); }
+            100% { transform: translate(0.5px, -1px) rotate(-0.5deg); }
+        }
+
+        /* Класс для активации тряски на контейнере */
+        .shake-active {
+            animation: shake-soft 0.2s ease-in-out infinite; 
+        }
+        
+        @keyframes flicker {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes pulse-border {
+            from { transform: translateX(-50%) scale(1); }
+            to { transform: translateX(-50%) scale(1.02); } /* Уменьшил пульсацию масштаба */
+        }
+
         /* --- MEDIA QUERY ДЛЯ ОЧЕНЬ УЗКИХ ЭКРАНОВ (например, iPhone SE) --- */
         @media (max-width: 375px) {
             
@@ -1636,6 +1726,10 @@
             const [playerName, setPlayerName] = useState('Player_Vasya'); // Дефолтное имя
 
             const [playerPhotoUrl, setPlayerPhotoUrl] = useState(null); // Дефолтный аватар
+
+            // --- НОВЫЕ STATE ДЛЯ КОМБО ---
+            const [combo, setCombo] = useState(0);           // Текущий процент (0-100)
+            const [isFrenzy, setIsFrenzy] = useState(false); // Активен ли режим Ярости
             
             // --- НОВЫЕ СТЕЙТЫ ДЛЯ БОЯ (ДОБАВЬ ЭТО) ---
             const [raidTarget, setRaidTarget] = useState(null); // { name, hp, balance }
@@ -1731,31 +1825,54 @@
             const completedTaskCount = completedTapTasks + completedBalanceTasks + completedMilestoneTasks + completedGoldenNutTasks + completedSpendTasks;
 
             
-            // --- НОВЫЙ ЕДИНЫЙ ОБРАБОТЧИК ДЛЯ КЛИКОВ И ТАЧЕЙ (processTap) ---
             const processTap = React.useCallback((tapCount, clientX, clientY, gameScreen) => {
                 if (!musicStarted) {
                     if (musicVolume > 0) { 
-                         audioMusicRef.current.play().catch(e => console.error("Ошибка воспроизведения музыки:", e));
+                         audioMusicRef.current.play().catch(e => console.error("Ошибка:", e));
                     }
                     setMusicStarted(true);
                 }
                 
                 if (activeTab !== 'forest' && activeTab !== 'raid') return; 
 
+                // --- ЛОГИКА КОМБО (НОВОЕ) ---
+                if (activeTab === 'forest') {
+                    if (!isFrenzy) {
+                        // Добавляем 0.5% за каждый тап
+                        setCombo(prev => {
+                            const newVal = prev + (1 * tapCount);
+                            if (newVal >= 100) {
+                                // АКТИВАЦИЯ ЯРОСТИ
+                                setIsFrenzy(true);
+                                playSound(audioTap); // Можно добавить отдельный звук
+                                tg.HapticFeedback?.notificationOccurred('success'); // Вибрация
+                                
+                                // Таймер на 10 секунд
+                                setTimeout(() => {
+                                    setIsFrenzy(false);
+                                    setCombo(0);
+                                }, 10000);
+                                return 100;
+                            }
+                            return newVal;
+                        });
+                    }
+                }
+                // -----------------------------
+
                 // Определяем общее количество кликов/тапов
                 const tapsToProcess = Math.min(tapCount, energy); 
                 
-                // --- ИСПРАВЛЕНИЕ: Проверка доступности клика ---
-                if (tapsToProcess <= 0 && !isInfiniteEnergy) return; 
+                // --- ИЗМЕНЕНИЕ: В Ярости можно кликать даже с 0 энергии ---
+                if (tapsToProcess <= 0 && !isInfiniteEnergy && !isFrenzy) return; 
                 
-                // --- ИСПРАВЛЕНИЕ: Условие главного IF ---
-                if (activeTab === 'forest' && (energy >= tapsToProcess || isInfiniteEnergy)) { 
+                // --- ИЗМЕНЕНИЕ: Условие главного IF ---
+                if (activeTab === 'forest' && (energy >= tapsToProcess || isInfiniteEnergy || isFrenzy)) { 
                     
-                    // --- ИСПРАВЛЕНИЕ: Расходуем энергию, только если она НЕ бесконечна ---
-                    if (!isInfiniteEnergy) {
+                    // --- ИЗМЕНЕНИЕ: Расходуем энергию, только если НЕТ Ярости и НЕТ бесконечной энергии ---
+                    if (!isInfiniteEnergy && !isFrenzy) {
                          setEnergy(e => e - tapsToProcess);
                     }
-                    // -------------------------------------------------------------
                     
                     setTotalTaps(t => t + tapsToProcess);
 
@@ -1763,32 +1880,45 @@
                     const newAnimations = [];
                     const rect = gameScreen.getBoundingClientRect();
                     
-                    // Обрабатываем все тапы 
-                    const actualTaps = isInfiniteEnergy ? tapCount : tapsToProcess; 
+                    // В режиме Ярости считаем все тапы (даже если энергии было 0)
+                    const actualTaps = (isInfiniteEnergy || isFrenzy) ? tapCount : tapsToProcess; 
                     
                     for (let i = 0; i < actualTaps; i++) {
                         const isCritical = Math.random() < 0.01; 
                         const critMultiplier = 5;
                         
-                        // --- ИСПРАВЛЕНИЕ: Используем актуальное tapValue ---
-                        const currentTapValue = isCritical ? (tapValue * critMultiplier) : tapValue;
-                        // --------------------------------------------------
+                        // --- ИЗМЕНЕНИЕ: Умножаем на 2, если Ярость ---
+                        const frenzyMult = isFrenzy ? 2 : 1;
+                        
+                        const currentTapValue = isCritical 
+                            ? (tapValue * critMultiplier * frenzyMult) 
+                            : (tapValue * frenzyMult);
                         
                         totalValue += currentTapValue;
                         
                         const animationX = clientX + (Math.random() * 20 - 10);
                         const animationY = clientY + (Math.random() * 20 - 10);
 
+                        // Если Ярость, текст красный и жирный
+                        const animColor = isFrenzy ? '#FF4500' : (isCritical ? '#FFA500' : 'gold');
+
                         newAnimations.push({
                             id: tapIdCounter++,
-                            value: `+${currentTapValue}`, 
+                            value: `+${currentTapValue}${isFrenzy ? '🔥' : ''}`, 
                             x: animationX - rect.left,
                             y: animationY - rect.top,
-                            isCritical: isCritical 
+                            isCritical: isCritical,
+                            color: animColor // Передаем цвет
                         });
                     }
 
                     playSound(audioTap);
+                    
+                    // Вибрация при ярости сильнее
+                    if (isFrenzy) {
+                        tg.HapticFeedback?.impactOccurred('heavy');
+                    }
+
                     setBalance(b => b + totalValue);
                     setTotalEarned(t => t + totalValue);
 
@@ -1803,8 +1933,7 @@
                         setIsSquirrelActive(false);
                     }, 150);
                 }
-            }, [musicStarted, musicVolume, activeTab, energy, isInfiniteEnergy, tapValue, setEnergy, setTotalTaps, setBalance, setTotalEarned, setTapAnimations, setIsSquirrelActive]);
-            // --- КОНЕЦ ЕДИНОГО ОБРАБОТЧИКА ---
+            }, [musicStarted, musicVolume, activeTab, energy, isInfiniteEnergy, tapValue, isFrenzy]); // <-- Добавили isFrenzy в зависимости
             
 // ... (Продолжение кода App, начиная с useEffect)
             
@@ -2294,6 +2423,19 @@
                     audioMusicRef.current.pause();
                 }
             }, [musicVolume, musicStarted]);
+
+            // --- ЛОГИКА ЗАТУХАНИЯ КОМБО (УСКОРЕННАЯ) ---
+            useEffect(() => {
+                let interval;
+                if (!isFrenzy && combo > 0) {
+                    interval = setInterval(() => {
+                        // БЫЛО: prev - 0.5
+                        // СТАЛО: prev - 2.0 (Быстрое падение, исчезнет за 5 сек)
+                        setCombo(prev => Math.max(0, prev - 2.0)); 
+                    }, 100);
+                }
+                return () => clearInterval(interval);
+            }, [isFrenzy, combo]);
 
             // --- НОВАЯ ХЕЛПЕР-ФУНКЦИЯ ДЛЯ ДОБАВЛЕНИЯ/СУММИРОВАНИЯ БОНУСОВ (Исправленная) ---
             const addOrStackBonus = (bonusToApply) => {
@@ -2884,13 +3026,27 @@
 
                 switch(activeTab) {
                     case 'forest':
-                        // ... (код этой вкладки не меняется, просто скопируйте его)
                         return (
                             <div 
-                                className="forest-content" 
+                                // --- ИЗМЕНЕНИЕ: Добавляем класс shake-active при ярости ---
+                                className={`forest-content ${isFrenzy ? 'shake-active' : ''}`} 
                                 onClick={handleTap} 
                                 onTouchStart={handleTouchStart} 
                             >
+                                {/* --- ПОЛОСКА КОМБО (С ЛОГИКОЙ ПОЯВЛЕНИЯ) --- */}
+                                <div 
+                                    className={`combo-bar-container 
+                                        ${(combo > 0 || isFrenzy) ? 'show' : ''} 
+                                        ${isFrenzy ? 'frenzy-mode' : ''}`
+                                    }
+                                >
+                                    <div 
+                                        className="combo-bar-fill" 
+                                        style={{ width: `${combo}%` }}
+                                    ></div>
+                                </div>
+                                {/* ------------------------- */}
+
                                 <ForestScreen 
                                     onTasksClick={() => setShowTasksModal(true)} 
                                     completedTasks={completedTaskCount}
@@ -2900,6 +3056,7 @@
                                     isSquirrelActive={isSquirrelActive} 
                                 />
                                 
+                                {/* Дальше идет твой старый код бонусов... */}
                                 {activeBonuses.length > 0 && (
                                     <div className="active-bonus-indicator">
                                         {activeBonuses.map(bonus => {
@@ -2908,13 +3065,14 @@
                                             let bonusText = '';
                                             
                                             if (bonus.type === 'madness') {
-                                                bonusText = `⚡️ Безумие: x${bonus.multiplier} к клику (${timeLeft}с)`;
+                                                bonusText = `⚡️ Безумие: x${bonus.multiplier} (${timeLeft}с)`;
                                             } else if (bonus.type === 'speed') {
                                                 bonusText = `⚡️ Ускорение: +${bonus.rate} ⚡️/сек (${timeLeft}с)`;
                                             } else if (bonus.type === 'double_income') {
                                                 bonusText = `💰 Двойной Доход (${timeLeft}с)`;
                                             } else if (bonus.type === 'hyperClick') {
-                                                bonusText = `👑 Гипер-клик: x${bonus.multiplier} + ∞ ⚡️ (${timeLeft}с)`;
+                                                // --- ИСПРАВИЛ ЗДЕСЬ: Было "Гипер", стало "Гипер-Клик" ---
+                                                bonusText = `👑 Гипер-Клик: x${bonus.multiplier} (${timeLeft}с)`;
                                             }
 
                                             return (
@@ -2925,7 +3083,8 @@
                                         })}
                                     </div>
                                 )}
-                                
+
+                                {/* Остальной код экрана (Орех, Анимации тапов) без изменений... */}
                                 {showGoldenNut && (
                                     <div 
                                         className="golden-nut-container"
@@ -2946,6 +3105,7 @@
                                         x={tap.x} 
                                         y={tap.y} 
                                         isCritical={tap.isCritical}
+                                        color={tap.color} // <-- Важно передать цвет для красных цифр
                                     />
                                 ))}
                                 {tapAnimations.filter(t => t.isPassive).map(tap => (
@@ -3560,20 +3720,19 @@ function DailyRewardsModal({ onClose, rewardsCatalog, currentState, isAvailable,
             );
         }
 
+        // Замени компонент TapAnimation на этот (чтобы поддерживал цвет текста)
         function TapAnimation({ value, x, y, color, isCritical }) {
             const style = {
                 left: `${x}px`, 
                 top: `${y}px`,
-                color: !isCritical ? (color || 'gold') : undefined,
+                // Если цвет передан (например красный при ярости), используем его. Иначе золотой.
+                color: color ? color : (isCritical ? '#FFA500' : 'gold'), 
             };
             
             const animationClass = `tap-animation ${isCritical ? 'critical' : ''}`;
             
             return (
-                <div 
-                    className={animationClass} 
-                    style={style}
-                >
+                <div className={animationClass} style={style}>
                     {value}
                 </div>
             );
