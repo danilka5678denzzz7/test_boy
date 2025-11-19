@@ -2431,7 +2431,7 @@
                     interval = setInterval(() => {
                         // БЫЛО: prev - 0.5
                         // СТАЛО: prev - 2.0 (Быстрое падение, исчезнет за 5 сек)
-                        setCombo(prev => Math.max(0, prev - 2.5)); 
+                        setCombo(prev => Math.max(0, prev - 2.0)); 
                     }, 100);
                 }
                 return () => clearInterval(interval);
