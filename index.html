@@ -1840,7 +1840,7 @@
                     if (!isFrenzy) {
                         // Добавляем 0.5% за каждый тап
                         setCombo(prev => {
-                            const newVal = prev + (0.25 * tapCount);
+                            const newVal = prev + (0.5 * tapCount);
                             if (newVal >= 100) {
                                 // АКТИВАЦИЯ ЯРОСТИ
                                 setIsFrenzy(true);
